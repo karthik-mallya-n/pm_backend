@@ -1,0 +1,180 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model for authentication and user management
+model User {
+  id               String          @id @default(uuid())
+  email            String          @unique
+  password         String
+  name             String
+  avatar           String?
+  role             Role            @default(MEMBER)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  projects         ProjectMember[]
+  assignedTickets  Ticket[]        @relation("AssignedTo")
+  reportedTickets  Ticket[]        @relation("ReportedBy")
+  comments         Comment[]
+  activities       Activity[]
+  sentInvitations  TeamInvitation[] @relation("InvitedBy")
+  receivedInvitations TeamInvitation[] @relation("InvitedUser")
+}
+
+enum Role {
+  MANAGER
+  MEMBER
+}
+
+// Team invitation model for inviting users to join teams
+model TeamInvitation {
+  id          String            @id @default(uuid())
+  email       String
+  invitedById String
+  invitedBy   User              @relation("InvitedBy", fields: [invitedById], references: [id], onDelete: Cascade)
+  invitedUserId String?
+  invitedUser User?             @relation("InvitedUser", fields: [invitedUserId], references: [id], onDelete: SetNull)
+  status      InvitationStatus  @default(PENDING)
+  token       String            @unique
+  expiresAt   DateTime
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+// Project model
+model Project {
+  id          String          @id @default(uuid())
+  name        String
+  description String?
+  key         String          @unique // Project key (e.g., "PRJ")
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  members     ProjectMember[]
+  tickets     Ticket[]
+}
+
+// Many-to-many relation between User and Project
+model ProjectMember {
+  id        String        @id @default(uuid())
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId String
+  project   Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  role      ProjectRole
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@unique([userId, projectId])
+}
+
+enum ProjectRole {
+  OWNER
+  MEMBER
+  VIEWER
+}
+
+// Ticket/Issue model
+model Ticket {
+  id            String       @id @default(uuid())
+  title         String
+  description   String?
+  status        TicketStatus @default(TODO)
+  priority      Priority     @default(MEDIUM)
+  type          TicketType   @default(BUG)
+  projectId     String
+  project       Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assigneeId    String?
+  assignee      User?        @relation("AssignedTo", fields: [assigneeId], references: [id])
+  reporterId    String
+  reporter      User         @relation("ReportedBy", fields: [reporterId], references: [id])
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  dueDate       DateTime?
+  estimatedHours Float?
+  comments      Comment[]
+  activities    Activity[]
+  labels        Label[]      @relation("TicketToLabel")
+}
+
+enum TicketStatus {
+  TODO
+  IN_PROGRESS
+  REVIEW
+  DONE
+}
+
+enum Priority {
+  LOWEST
+  LOW
+  MEDIUM
+  HIGH
+  HIGHEST
+}
+
+enum TicketType {
+  BUG
+  FEATURE
+  TASK
+  IMPROVEMENT
+}
+
+// Comment model for ticket discussions
+model Comment {
+  id        String   @id @default(uuid())
+  content   String
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Activity model for tracking changes
+model Activity {
+  id           String        @id @default(uuid())
+  activityType ActivityType
+  description  String
+  ticketId     String?
+  ticket       Ticket?       @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime      @default(now())
+  metadata     Json?         // Store additional activity data (old/new values, etc.)
+}
+
+enum ActivityType {
+  TICKET_CREATED
+  TICKET_UPDATED
+  TICKET_COMMENTED
+  TICKET_ASSIGNED
+  TICKET_MOVED
+  PROJECT_CREATED
+  PROJECT_UPDATED
+  USER_JOINED
+  USER_INVITE
+}
+
+// Label model for categorizing tickets
+model Label {
+  id        String    @id @default(uuid())
+  name      String
+  color     String
+  tickets   Ticket[]  @relation("TicketToLabel")
+  createdAt DateTime  @default(now())
+}
