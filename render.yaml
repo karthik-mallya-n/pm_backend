@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: project-mnj-server
+    runtime: node
+    plan: free
+    buildCommand: npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+    healthCheckPath: /
+    autoDeploy: true
+    repo: https://github.com/your-username/your-repo
+    branch: main
+    rootDir: ./server
