@@ -10,6 +10,5 @@ services:
         value: production
     healthCheckPath: /
     autoDeploy: true
-    repo: https://github.com/your-username/your-repo
-    branch: main
     rootDir: ./server
+    branch: main
