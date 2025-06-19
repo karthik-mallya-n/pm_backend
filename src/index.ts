@@ -22,8 +22,8 @@ app.use(express.json());
 app.use(morgan(config.nodeEnv === "development" ? "dev" : "combined"));
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+app.get('/', (req, res) => {
+  res.json({message: 'Project Management working perfectly', status: 'OK', timestamp: new Date().toISOString() });
 });
 
 // API Routes
